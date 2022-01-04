@@ -1,0 +1,7 @@
+.idea
+*venv
+*virtualenv
+.vscode
+*.pyc
+*/.pytest_cache
+allure_report
