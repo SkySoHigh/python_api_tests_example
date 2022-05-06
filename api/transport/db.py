@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import create_engine, event, delete, insert, select, update
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, Query
 from sqlalchemy.pool import QueuePool
-
-# For type hinting
-from sqlalchemy.sql.dml import Delete, Insert, Update
-from sqlalchemy.sql.selectable import Select
 
 
 @event.listens_for(Query, "before_compile", retval=True)
@@ -30,27 +26,10 @@ class DBSession:
                                       max_overflow=max_overflow)
         self.__session = Session(self.__engine, future=True)
 
-    def close(self):
-        self.__session.close()
-        self.__engine.dispose()
+    @property
+    def session(self):
+        return self.__session
 
-    def execute(self, statement, **kwargs):
-        return self.__session.execute(statement, **kwargs)
-
-    def query(self, *entities, **kwargs) -> Query:
-        return self.__session.query(*entities, **kwargs)
-
-    def update(self, entity) -> Update:
-        return update(entity)
-
-    def insert(self, entity) -> Insert:
-        return insert(entity)
-
-    def delete(self, entity) -> Delete:
-        return delete(entity)
-
-    def select(self, entity) -> Select:
-        return select(entity)
-
-    def commit(self):
-        return self.__session.commit()
+    @property
+    def engine(self):
+        return self.__engine
