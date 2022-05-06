@@ -1,3 +1,4 @@
+from api.controllers.db import UserDBController
 from api.transport.db import DBSession
 
 
@@ -13,4 +14,4 @@ class DBClient:
         self.__session = DBSession(url=url,
                                    pool_size=pool_size,
                                    max_overflow=max_overflow)
-        ...
+        self.users = UserDBController(self.__session)
