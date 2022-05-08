@@ -5,3 +5,4 @@
 *.pyc
 */.pytest_cache
 allure_report
+*.log
