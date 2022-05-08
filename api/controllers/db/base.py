@@ -1,20 +1,27 @@
 # -*- coding: utf-8 -*-
 import abc
 from abc import ABC
-from typing import List, Optional, Type, Generator
+from typing import List, Optional, Type, Generator, Any
 
 from decorator import decorator
 
 from api.transport import DBSession
+from libs.logging import trace
 from models.db import AbcDBModel
 
 
 @decorator
 def default(func, name: str = None, *args, **kwargs):
     """
-    Method to decorate BaseDBController function with signature and typehints from interface.
+    Decorates unimplemented methods of descendants of the BaseDBController class to call their encapsulated equivalent
+    from the base class with a redefined call signature and typehints.
     Mapping of functions occurs by the same name with the prefix "_".
-    Example: Interface.create() -> BaseDBController._create().
+
+    Example:
+    ... class MyCustomController(BaseDBController):
+    ...    @default
+    ...    def create(self, entity: Type[User]) -> None: pass
+    ...    # BaseDBController._create(...) would be used
 
     Args:
         func: Decorated function
@@ -27,7 +34,6 @@ def default(func, name: str = None, *args, **kwargs):
 
     try:
         name = name if name else f'_{func.__name__}'
-        print(name)
         self, args = args[0], args[1::]
         def_func = getattr(self, str(name))
         return def_func(*args, **kwargs)
@@ -38,8 +44,15 @@ def default(func, name: str = None, *args, **kwargs):
 
 def default_all(cls):
     """
-    Decorates all class method with default decorator.
-    Warning: If there is default decorator on a method and default_all on a class, then only the latter will have an effect.
+    Decorates all class method with '@default' decorator.
+    Warning: If there is @default decorator on a method and @default_all on a class,
+    then only the latter will have an effect.
+
+    Example:
+    ... @default_all
+    ... class MyCustomController(BaseDBController):
+    ...    def create(self, entity: Type[User]) -> None: pass
+    ...    # BaseDBController._create(...) would be used
 
     Returns: NoReturn
     """
@@ -50,14 +63,18 @@ def default_all(cls):
 
 
 @decorator
-def trace(f, *args, **kw):
-    kwstr = ', '.join('%r: %r' % (k, kw[k]) for k in sorted(kw))
-    print("Calling %s with args %s, {%s}" % (f.__name__, args, kwstr))
-    return f(*args, **kw)
+def commit(function, self, *args, **kwargs) -> Any:
+    """
+    Sends a commit after successful execution of the request and performs a rollback in case of an error
+    Args:
+        function: Decorated function
+        self: Class object with 'session' property
+        *args: Function args
+        **kwargs: Function kwargs
 
+    Returns: Decorated function exec result
 
-@decorator
-def commit(function, self, *args, **kwargs):
+    """
     try:
         result = function(self, *args, **kwargs)
         self.session.commit()
@@ -68,6 +85,10 @@ def commit(function, self, *args, **kwargs):
 
 
 class BaseInterface:
+    """
+    An interface that guarantees the implementation of basic object management methods.
+    Note:
+    """
 
     def __new__(cls, *args, **kwargs):
         if cls is BaseInterface:
@@ -103,6 +124,9 @@ class BaseInterface:
 
 
 class BaseDBController(BaseInterface, ABC):
+    """
+    Contains a basic set of private methods for performing operations with database objects.
+    """
 
     def __init__(self, session: DBSession):
         """
