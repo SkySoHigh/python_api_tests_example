@@ -6,7 +6,7 @@ from typing import List, Optional, Type, Generator, Any
 from decorator import decorator
 
 from api.transport import DBSession
-from libs.logging import trace
+from libs.logging import debug
 from models.db import AbcDBModel
 
 
@@ -139,40 +139,40 @@ class BaseDBController(BaseInterface, ABC):
     def session(self):
         return self.__session.session
 
-    @trace
+    @debug
     @commit
     def _create(self, entity: Type[AbcDBModel]) -> None:
         self.session.add(entity)
 
-    @trace
+    @debug
     def _read_all(self, model: AbcDBModel, *, limit=1000) -> List[Optional[AbcDBModel]]:
         return self.session.query(model).limit(limit).all()
 
-    @trace
+    @debug
     def _read_by(self, where, model: AbcDBModel, *, limit=1000) -> List[Optional[AbcDBModel]]:
         return self.session.query(model).filter_by(**where).limit(limit).all()
 
-    @trace
+    @debug
     def _read_in_batches(self, model: AbcDBModel, *, batch_size=100) -> Generator[AbcDBModel, None, None]:
         for r in self.session.query(model).yield_per(batch_size):
             yield r
 
-    @trace
+    @debug
     @commit
     def _update_by(self, model: AbcDBModel, where: dict, values: dict) -> None:
         self.session.query(model).filter_by(**where).update(values)
 
-    @trace
+    @debug
     @commit
     def _delete(self, entity: Type[AbcDBModel]) -> None:
         self.session.delete(entity)
 
-    @trace
+    @debug
     @commit
     def _delete_all(self, model: AbcDBModel) -> None:
         self.session.query(model).delete()
 
-    @trace
+    @debug
     @commit
     def _delete_by(self, model: AbcDBModel, where: dict) -> None:
         self.session.query(model).filter_by(**where).delete()
