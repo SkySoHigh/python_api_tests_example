@@ -75,12 +75,14 @@ def commit(function, self, *args, **kwargs) -> Any:
     Returns: Decorated function exec result
 
     """
+    session = getattr(self, '_BaseDBController__session')
+
     try:
         result = function(self, *args, **kwargs)
-        self.session.commit()
+        session.commit()
         return result
     except Exception as e:
-        self.session.rollback()
+        session.rollback()
         raise e
 
 
@@ -132,44 +134,40 @@ class BaseDBController(BaseInterface, ABC):
         """
         self.__session = session
 
-    @property
-    def session(self):
-        return self.__session.session
-
     @debug
     @commit
     def _create(self, entity: Type[AbcDBModel]) -> None:
-        self.session.add(entity)
+        self.__session.add(entity)
 
     @debug
     def _read_all(self, model: AbcDBModel, *, limit=1000) -> List[Optional[AbcDBModel]]:
-        return self.session.query(model).limit(limit).all()
+        return self.__session.query(model).limit(limit).all()
 
     @debug
     def _read_by(self, where, model: AbcDBModel, *, limit=1000) -> List[Optional[AbcDBModel]]:
-        return self.session.query(model).filter_by(**where).limit(limit).all()
+        return self.__session.query(model).filter_by(**where).limit(limit).all()
 
     @debug
     def _read_in_batches(self, model: AbcDBModel, *, batch_size=100) -> Generator[AbcDBModel, None, None]:
-        for r in self.session.query(model).yield_per(batch_size):
+        for r in self.__session.query(model).yield_per(batch_size):
             yield r
 
     @debug
     @commit
     def _update_by(self, model: AbcDBModel, where: dict, values: dict) -> None:
-        self.session.query(model).filter_by(**where).update(values)
+        self.__session.query(model).filter_by(**where).update(values)
 
     @debug
     @commit
     def _delete(self, entity: Type[AbcDBModel]) -> None:
-        self.session.delete(entity)
+        self.__session.delete(entity)
 
     @debug
     @commit
     def _delete_all(self, model: AbcDBModel) -> None:
-        self.session.query(model).delete()
+        self.__session.query(model).delete()
 
     @debug
     @commit
     def _delete_by(self, model: AbcDBModel, where: dict) -> None:
-        self.session.query(model).filter_by(**where).delete()
+        self.__session.query(model).filter_by(**where).delete()

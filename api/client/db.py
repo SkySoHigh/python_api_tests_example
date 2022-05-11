@@ -11,7 +11,24 @@ class DBClient:
             pool_size (int, optional): Number of connections to be maintained. Defaults to 5.
             max_overflow (int, optional): The maximum overflow size of the pool. Defaults to 5.
         """
-        self.__session = DBSession(url=url,
-                                   pool_size=pool_size,
-                                   max_overflow=max_overflow)
-        self.users = UserDBController(self.__session)
+
+        self.__db_session = DBSession(url=url,
+                                      pool_size=pool_size,
+                                      max_overflow=max_overflow)
+        self.users = UserDBController(self.session)
+
+    @property
+    def session(self):
+        return self.__db_session.session
+
+    @property
+    def engine(self):
+        return self.__db_session.engine
+
+    @property
+    def session_state(self):
+        return {
+            'new': self.session.new,
+            'dirty': self.session.dirty,
+            'deleted': self.session.deleted
+        }
