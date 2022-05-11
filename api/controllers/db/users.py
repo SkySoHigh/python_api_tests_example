@@ -1,7 +1,7 @@
 from typing import Type, List, Optional, Generator
 
-from api.controllers.db import BaseDBController, default, default_all
-from models.db import User, User
+from api.controllers.db import BaseDBController, default_all
+from models.db import User
 
 
 @default_all
@@ -10,13 +10,13 @@ class UserDBController(BaseDBController):
     def create(self, entity: Type[User]) -> None:
         pass
 
-    def read_all(self, model: User = User, *, limit=1000) -> List[Optional[User]]:
+    def read_all(self, model: User = User, *, limit=1000) -> List[Optional[Type[User]]]:
         pass
 
-    def read_by(self, where, model: User = User, *, limit=1000) -> List[Optional[User]]:
+    def read_by(self, where, model: User = User, *, limit=1000) -> List[Optional[Type[User]]]:
         pass
 
-    def read_in_batches(self, model: User = User, *, batch_size=1000) -> Generator[User, None, None]:
+    def read_in_batches(self, model: User = User, *, batch_size=1000) -> Generator[Type[User], None, None]:
         pass
 
     def update_by(self, where: dict, values: dict, model: User = User) -> None:

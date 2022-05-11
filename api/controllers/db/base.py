@@ -4,8 +4,8 @@ from abc import ABC
 from typing import List, Optional, Type, Generator, Any
 
 from decorator import decorator
+from sqlalchemy.orm import Session
 
-from api.transport import DBSession
 from libs.logging import debug
 from models.db import AbcDBModel
 
@@ -99,16 +99,13 @@ class BaseInterface:
     def create(self, entity: Type[AbcDBModel]) -> None: raise NotImplementedError
 
     @abc.abstractmethod
-    def read_all(self, model: AbcDBModel = AbcDBModel, *, limit=1000) -> List[
-        Optional[AbcDBModel]]: raise NotImplementedError
+    def read_all(self, model: AbcDBModel = AbcDBModel, *, limit=1000) -> List[Optional[Type[AbcDBModel]]]: raise NotImplementedError
 
     @abc.abstractmethod
-    def read_by(self, where, model: AbcDBModel = AbcDBModel, *, limit=1000) -> List[
-        Optional[AbcDBModel]]: raise NotImplementedError
+    def read_by(self, where, model: AbcDBModel = AbcDBModel, *, limit=1000) -> List[Optional[Type[AbcDBModel]]]: raise NotImplementedError
 
     @abc.abstractmethod
-    def read_in_batches(self, model: AbcDBModel = AbcDBModel, *, batch_size=1000) -> Generator[
-        AbcDBModel, None, None]: raise NotImplementedError
+    def read_in_batches(self, model: AbcDBModel = AbcDBModel, *, batch_size=1000) -> Generator[Type[AbcDBModel], None, None]: raise NotImplementedError
 
     @abc.abstractmethod
     def update_by(self, where: dict, values: dict, model: AbcDBModel = AbcDBModel) -> None: raise NotImplementedError
@@ -128,7 +125,7 @@ class BaseDBController(BaseInterface, ABC):
     Contains a basic set of private methods for performing operations with database objects.
     """
 
-    def __init__(self, session: DBSession):
+    def __init__(self, session: Session):
         """
         Args:
             session: Session object for executing commands in the database (transport layer)

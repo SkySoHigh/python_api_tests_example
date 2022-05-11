@@ -27,7 +27,7 @@ class DBSession:
         self.__session = Session(self.__engine, future=True)
 
     @property
-    def session(self):
+    def session(self) -> Session:
         return self.__session
 
     @property
