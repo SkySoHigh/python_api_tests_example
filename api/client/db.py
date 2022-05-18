@@ -1,6 +1,6 @@
-from config import ECHO_DB_QUERIES, ECHO_CONNECTION_POOL
-from api.transport.db import DBSession
 from api.controllers.db import UserExampleDBController
+from api.transport.db import DBSession
+from config import ECHO_DB_QUERIES, ECHO_CONNECTION_POOL
 
 
 class DBClient:
@@ -22,20 +22,8 @@ class DBClient:
                                       max_overflow=max_overflow,
                                       echo=echo,
                                       echo_pool=echo_pool)
-        self.users = UserExampleDBController(self.session)
+        self.users = UserExampleDBController(self.__db_session)
 
     @property
-    def session(self):
-        return self.__db_session.session
-
-    @property
-    def engine(self):
-        return self.__db_session.engine
-
-    @property
-    def session_state(self):
-        return {
-            'new': self.session.new,
-            'dirty': self.session.dirty,
-            'deleted': self.session.deleted
-        }
+    def db_params(self) -> DBSession:
+        return self.__db_session

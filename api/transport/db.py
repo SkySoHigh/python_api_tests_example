@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, Query
+from contextlib import contextmanager
+from typing import ContextManager
+
+from sqlalchemy import create_engine, event, exc
+from sqlalchemy.orm import Session, Query, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 
@@ -29,12 +32,30 @@ class DBSession:
                                       max_overflow=max_overflow,
                                       echo=echo,
                                       echo_pool=echo_pool)
-        self.__session = Session(self.__engine, future=True)
+        self.__session_maker = sessionmaker(self.__engine, autoflush=True, autocommit=False)
 
     @property
-    def session(self) -> Session:
-        return self.__session
+    def session_maker(self) -> sessionmaker:
+        return self.__session_maker
 
     @property
     def engine(self):
         return self.__engine
+
+    @contextmanager
+    def session_manager(self) -> ContextManager[Session]:
+        """
+        Contextmanager wrapper above sessionmaker contextmanager (opens and close session with rollback on exception)
+
+        Note: By default sessionmaker is used as factory for creating Session objects, but returned object hides Session
+        methods from hinting.
+
+        Returns:
+
+        """
+        with self.session_maker() as _session:
+            try:
+                yield _session
+            except exc.SQLAlchemyError as e:
+                _session.rollback()
+                raise e

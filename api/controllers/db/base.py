@@ -2,9 +2,7 @@
 import sys
 from typing import List, Optional, Type, Generator, TypeVar, Generic, NoReturn, Any
 
-from sqlalchemy import exc
-from sqlalchemy.orm import Session
-
+from api.transport import DBSession
 from models.db import BaseModel
 
 _python_version = sys.version_info
@@ -40,13 +38,13 @@ class BaseDBController(Generic[MODEL_TYPE]):
     Contains a basic set of private methods for performing operations with database objects.
     """
 
-    def __init__(self, session: Session):
+    def __init__(self, db_session: DBSession):
         """
         Args:
-            session: Session object for executing commands in the database (transport layer).
+            db_session: DBSession object for executing commands in the database (transport layer).
         """
-        self.__session = session
         self.__model = get_generic_type_arg(self)
+        self.__session = db_session.session_manager
 
     def create(self, entity: Type[MODEL_TYPE]) -> NoReturn:
         """
@@ -56,12 +54,10 @@ class BaseDBController(Generic[MODEL_TYPE]):
 
         Returns: NoReturn
         """
-        try:
-            self.__session.add(entity)
-            self.__session.commit()
-        except exc.SQLAlchemyError as e:
-            self.__session.rollback()
-            raise e
+
+        with self.__session() as session:
+            session.add(entity)
+            session.commit()
 
     def read_by(self, *, limit: int = 1000, **filter_kwargs, ) -> List[Optional[MODEL_TYPE]]:
         """
@@ -75,7 +71,8 @@ class BaseDBController(Generic[MODEL_TYPE]):
         Returns: List with model based database objects
 
         """
-        return self.__session.query(self.__model).filter_by(**filter_kwargs).limit(limit).all()
+        with self.__session() as session:
+            return session.query(self.__model).filter_by(**filter_kwargs).limit(limit).all()
 
     def read_in_batches(self, *, batch_size: int = 100, **filter_kwargs) -> Generator[MODEL_TYPE, None, None]:
         """
@@ -88,16 +85,14 @@ class BaseDBController(Generic[MODEL_TYPE]):
 
         Returns: Generator with model based database objects
         """
-        for r in self.__session.query(self.__model).filter_by(**filter_kwargs).yield_per(batch_size):
-            yield r
+        with self.__session() as session:
+            for r in session.query(self.__model).filter_by(**filter_kwargs).yield_per(batch_size):
+                yield r
 
     def update_by(self, where: dict, values: dict) -> NoReturn:
-        try:
-            self.__session.query(self.__model).filter_by(**where).update(values)
-            self.__session.commit()
-        except exc.SQLAlchemyError as e:
-            self.__session.rollback()
-            raise e
+        with self.__session() as session:
+            session.query(self.__model).filter_by(**where).update(values)
+            session.commit()
 
     def delete(self, entity: Type[MODEL_TYPE]) -> NoReturn:
         """
@@ -108,12 +103,9 @@ class BaseDBController(Generic[MODEL_TYPE]):
 
         Returns: NoReturn
         """
-        try:
-            self.__session.delete(entity)
-            self.__session.commit()
-        except exc.SQLAlchemyError as e:
-            self.__session.rollback()
-            raise e
+        with self.__session() as session:
+            session.delete(entity)
+            session.commit()
 
     def delete_by(self, **filter_kwargs) -> NoReturn:
         """
@@ -124,9 +116,6 @@ class BaseDBController(Generic[MODEL_TYPE]):
 
         Returns: NoReturn
         """
-        try:
-            self.__session.query(self.__model).filter_by(**filter_kwargs).delete()
-            self.__session.commit()
-        except exc.SQLAlchemyError as e:
-            self.__session.rollback()
-            raise e
+        with self.__session() as session:
+            session.query(self.__model).filter_by(**filter_kwargs).delete()
+            session.commit()
