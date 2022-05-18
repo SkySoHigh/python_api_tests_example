@@ -1,128 +1,41 @@
 # -*- coding: utf-8 -*-
-import abc
-from abc import ABC
-from typing import List, Optional, Type, Generator, Any
+import sys
+from typing import List, Optional, Type, Generator, TypeVar, Generic, NoReturn, Any
 
-from decorator import decorator
+from sqlalchemy import exc
 from sqlalchemy.orm import Session
 
-from libs.logging import debug
-from models.db import AbcDBModel
+from models.db import BaseModel
+
+_python_version = sys.version_info
+
+if _python_version >= (3, 8):
+    from typing import get_args
+else:
+    from typing_extensions import get_args
+
+MODEL_TYPE = TypeVar("MODEL_TYPE", bound=BaseModel)
 
 
-@decorator
-def default(func, name: str = None, *args, **kwargs):
+def get_generic_type_arg(cls) -> Any:
     """
-    Decorates unimplemented methods of descendants of the BaseDBController class to call their encapsulated equivalent
-    from the base class with a redefined call signature and typehints.
-    Mapping of functions occurs by the same name with the prefix "_".
-
-    Example:
-    ... class MyCustomController(BaseDBController):
-    ...    @default
-    ...    def create(self, entity: Type[User]) -> None: pass
-    ...    # BaseDBController._create(...) would be used
-
+    Gets type of arg passed to the typing.Generic
     Args:
-        func: Decorated function
-        name: Name of the function in the BaseDBController. If empty: '_' + func.__name__  will be used.
-        *args: Decorated function args (declared in the interface)
-        **kwargs: Decorated function kwargs (declared in the interface)
+        cls: Class object
 
-    Returns: Original function from BaseDBController decorated with interface signature and typehints
+    Examples:
+        ExampleController(BaseDBController[ExampleModel]) -> returns ExampleModel
+
+    Returns: type of arg passed to the typing.Generic
     """
 
-    try:
-        name = name if name else f'_{func.__name__}'
-        self, args = args[0], args[1::]
-        def_func = getattr(self, str(name))
-        return def_func(*args, **kwargs)
-    except AttributeError:
-        raise AttributeError(f'There is no default implementation with name: {name} '
-                             f'among BaseDBController methods')
+    t = getattr(cls, '__orig_bases__', None)[0]
+    if not t:
+        raise KeyError(f'There is no __orig_bases__ in {cls}')
+    return get_args(t)[0]
 
 
-def default_all(cls):
-    """
-    Decorates all class method with '@default' decorator.
-    Warning: If there is @default decorator on a method and @default_all on a class,
-    then only the latter will have an effect.
-
-    Example:
-    ... @default_all
-    ... class MyCustomController(BaseDBController):
-    ...    def create(self, entity: Type[User]) -> None: pass
-    ...    # BaseDBController._create(...) would be used
-
-    Returns: NoReturn
-    """
-    for attr in cls.__dict__:
-        if callable(getattr(cls, attr)) and not attr.startswith("_"):
-            setattr(cls, attr, default(getattr(cls, attr)))
-    return cls
-
-
-@decorator
-def commit(function, self, *args, **kwargs) -> Any:
-    """
-    Sends a commit after successful execution of the request and performs a rollback in case of an error
-    Args:
-        function: Decorated function
-        self: Class object with 'session' property
-        *args: Function args
-        **kwargs: Function kwargs
-
-    Returns: Decorated function exec result
-
-    """
-    session = getattr(self, '_BaseDBController__session')
-
-    try:
-        result = function(self, *args, **kwargs)
-        session.commit()
-        return result
-    except Exception as e:
-        session.rollback()
-        raise e
-
-
-class BaseInterface:
-    """
-    An interface that guarantees the implementation of basic object management methods.
-    Note:
-    """
-
-    def __new__(cls, *args, **kwargs):
-        if cls is BaseInterface:
-            raise TypeError("TypeError: Can't instantiate abstract class {name} directly".format(name=cls.__name__))
-        return object.__new__(cls)
-
-    @abc.abstractmethod
-    def create(self, entity: Type[AbcDBModel]) -> None: raise NotImplementedError
-
-    @abc.abstractmethod
-    def read_all(self, model: AbcDBModel = AbcDBModel, *, limit=1000) -> List[Optional[Type[AbcDBModel]]]: raise NotImplementedError
-
-    @abc.abstractmethod
-    def read_by(self, where, model: AbcDBModel = AbcDBModel, *, limit=1000) -> List[Optional[Type[AbcDBModel]]]: raise NotImplementedError
-
-    @abc.abstractmethod
-    def read_in_batches(self, model: AbcDBModel = AbcDBModel, *, batch_size=1000) -> Generator[Type[AbcDBModel], None, None]: raise NotImplementedError
-
-    @abc.abstractmethod
-    def update_by(self, where: dict, values: dict, model: AbcDBModel = AbcDBModel) -> None: raise NotImplementedError
-
-    @abc.abstractmethod
-    def delete(self, entity: Type[AbcDBModel]) -> None: raise NotImplementedError
-
-    @abc.abstractmethod
-    def delete_all(self, model: AbcDBModel = AbcDBModel) -> None: raise NotImplementedError
-
-    @abc.abstractmethod
-    def delete_by(self, where: dict, model: AbcDBModel = AbcDBModel) -> None: raise NotImplementedError
-
-
-class BaseDBController(BaseInterface, ABC):
+class BaseDBController(Generic[MODEL_TYPE]):
     """
     Contains a basic set of private methods for performing operations with database objects.
     """
@@ -130,44 +43,90 @@ class BaseDBController(BaseInterface, ABC):
     def __init__(self, session: Session):
         """
         Args:
-            session: Session object for executing commands in the database (transport layer)
+            session: Session object for executing commands in the database (transport layer).
         """
         self.__session = session
+        self.__model = get_generic_type_arg(self)
 
-    @debug
-    @commit
-    def _create(self, entity: Type[AbcDBModel]) -> None:
-        self.__session.add(entity)
+    def create(self, entity: Type[MODEL_TYPE]) -> NoReturn:
+        """
+        Adds object to the database.
+        Args:
+            entity: Object created on the basis of the table model.
 
-    @debug
-    def _read_all(self, model: AbcDBModel, *, limit=1000) -> List[Optional[AbcDBModel]]:
-        return self.__session.query(model).limit(limit).all()
+        Returns: NoReturn
+        """
+        try:
+            self.__session.add(entity)
+            self.__session.commit()
+        except exc.SQLAlchemyError as e:
+            self.__session.rollback()
+            raise e
 
-    @debug
-    def _read_by(self, where, model: AbcDBModel, *, limit=1000) -> List[Optional[AbcDBModel]]:
-        return self.__session.query(model).filter_by(**where).limit(limit).all()
+    def read_by(self, *, limit: int = 1000, **filter_kwargs, ) -> List[Optional[MODEL_TYPE]]:
+        """
+        Reads model based objects from the database with provided filter_kwargs.
 
-    @debug
-    def _read_in_batches(self, model: AbcDBModel, *, batch_size=100) -> Generator[AbcDBModel, None, None]:
-        for r in self.__session.query(model).yield_per(batch_size):
+        Args:
+            limit: Max query limit
+            **filter_kwargs: Kwargs passed to the filter method (table columns and values).
+                             If no filters are specified, then all objects will be returned.
+
+        Returns: List with model based database objects
+
+        """
+        return self.__session.query(self.__model).filter_by(**filter_kwargs).limit(limit).all()
+
+    def read_in_batches(self, *, batch_size: int = 100, **filter_kwargs) -> Generator[MODEL_TYPE, None, None]:
+        """
+        Reads model based objects from the database as Generator.
+
+        Args:
+            batch_size: Max number of objects returned from the database per iteration.
+            **filter_kwargs: Kwargs passed to the filter method (table columns and values).
+                             If no filters are specified, then all objects will be returned.
+
+        Returns: Generator with model based database objects
+        """
+        for r in self.__session.query(self.__model).filter_by(**filter_kwargs).yield_per(batch_size):
             yield r
 
-    @debug
-    @commit
-    def _update_by(self, model: AbcDBModel, where: dict, values: dict) -> None:
-        self.__session.query(model).filter_by(**where).update(values)
+    def update_by(self, where: dict, values: dict) -> NoReturn:
+        try:
+            self.__session.query(self.__model).filter_by(**where).update(values)
+            self.__session.commit()
+        except exc.SQLAlchemyError as e:
+            self.__session.rollback()
+            raise e
 
-    @debug
-    @commit
-    def _delete(self, entity: Type[AbcDBModel]) -> None:
-        self.__session.delete(entity)
+    def delete(self, entity: Type[MODEL_TYPE]) -> NoReturn:
+        """
+        Deletes object from the database.
 
-    @debug
-    @commit
-    def _delete_all(self, model: AbcDBModel) -> None:
-        self.__session.query(model).delete()
+        Args:
+            entity: Object created on the basis of the table model.
 
-    @debug
-    @commit
-    def _delete_by(self, model: AbcDBModel, where: dict) -> None:
-        self.__session.query(model).filter_by(**where).delete()
+        Returns: NoReturn
+        """
+        try:
+            self.__session.delete(entity)
+            self.__session.commit()
+        except exc.SQLAlchemyError as e:
+            self.__session.rollback()
+            raise e
+
+    def delete_by(self, **filter_kwargs) -> NoReturn:
+        """
+        Deletes all objects from the database with provided filter_kwargs.
+        Args:
+            **filter_kwargs: Kwargs passed to the filter method (table columns and values).
+                             If no filters are specified, then all objects will be deleted.
+
+        Returns: NoReturn
+        """
+        try:
+            self.__session.query(self.__model).filter_by(**filter_kwargs).delete()
+            self.__session.commit()
+        except exc.SQLAlchemyError as e:
+            self.__session.rollback()
+            raise e
