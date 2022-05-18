@@ -1,28 +1,36 @@
+import json
 import logging
 import logging.config
 import os
-import json
+import sys
+from collections.abc import Callable
+from typing import TypeVar
 
-from decorator import decorator
+_python_version = sys.version_info
+
+if _python_version >= (3, 8):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
+
+T = TypeVar('T')
+P = ParamSpec('P')
 
 logger = logging.getLogger(__name__)
 
 
-@decorator
-def debug(f, *args, **kw):
+def debug(f: Callable[P, T]) -> Callable[P, T]:
     """
-    Logs all function calls on a DEBUG log level
-    Args:
-        f: Decorated function
-        *args: Decorated function args
-        **kw: Decorated function kwargs
-
-    Returns:
-
+    A type-safe decorator to add logging to a function.
+    Note: Works ONLY with functions (not class methods).
     """
-    kwstr = ', '.join('%r: %r' % (k, kw[k]) for k in sorted(kw))
-    logger.debug(f'Calling {f.__name__} with args: {args} and kwargs: {kwstr}')
-    return f(*args, **kw)
+
+    def inner(*args: P.args, **kwargs: P.kwargs) -> T:
+        kwstr = ', '.join('%r: %r' % (k, kwargs[k]) for k in sorted(kwargs))
+        logger.debug(f'Calling {f.__name__} with args: {args} and kwargs: {kwstr}')
+        return f(*args, **kwargs)
+
+    return inner
 
 
 def setup_logging(default_path="./logging.json", env_key="LOG_CFG"):
