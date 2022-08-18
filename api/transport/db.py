@@ -12,8 +12,7 @@ def refresh_info_in_session(query):
     return query.populate_existing()
 
 
-class DBSession:
-
+class DbTransport:
     def __init__(self, url: str, pool_size: int = 5, max_overflow: int = 5, echo: bool = False,
                  echo_pool: bool = False):
         """Database session constructor.
