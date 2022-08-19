@@ -1,3 +1,4 @@
-import pytest
-
-pytest_plugins = ["fixtures.client"]
+pytest_plugins = [
+    "fixtures.clients",
+    "fixtures.common",
+]
