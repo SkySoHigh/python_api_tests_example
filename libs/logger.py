@@ -1,14 +1,13 @@
 import json
-import logging
 import logging.config
 import os
 import sys
-from collections.abc import Callable
+from typing import Callable
 from typing import TypeVar
 
 _python_version = sys.version_info
 
-if _python_version >= (3, 8):
+if _python_version >= (3, 9):
     from typing import ParamSpec
 else:
     from typing_extensions import ParamSpec
@@ -33,21 +32,18 @@ def debug(f: Callable[P, T]) -> Callable[P, T]:
     return inner
 
 
-def setup_logging(default_path="./logging.json", env_key="LOG_CFG"):
+def setup_logging(logging_cfg_path: str):
     """
     Sets logger based on logging.json config
 
     Args:
-        default_path: Path to logging.json file
-        env_key: ENV variable with path to logging.json file
+        logging_cfg_path: Path to logging.json file
 
     Returns: NoReturn
 
     """
-    env_value = os.getenv(env_key, None)
-    path = default_path if not env_value else env_value
     try:
-        with open(path, "rt") as f:
+        with open(logging_cfg_path, "rt") as f:
             config = json.load(f)
         logging.config.dictConfig(config)
     except FileNotFoundError as e:
