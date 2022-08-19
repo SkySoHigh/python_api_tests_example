@@ -13,7 +13,7 @@ class HttpConfig:
 
     URL: str = f'{PROTOCOL}://{HOST}:{PORT}/{BASE_ENDPOINT}'
 
-    DEFAULT_HEADERS: dict = json.loads(os.environ.get('http_headers', '').replace("'", "\""))
-    DEFAULT_COOKIES: dict = json.loads(os.environ.get('http_cookies', '').replace("'", "\""))
+    DEFAULT_HEADERS: dict = json.loads(os.environ.get('http_headers', '{}').replace("'", "\""))
+    DEFAULT_COOKIES: dict = json.loads(os.environ.get('http_cookies', '{}').replace("'", "\""))
 
     FOLLOW_REDIRECTS: bool = bool(int(os.environ.get('http_follow_redirects', True)))
