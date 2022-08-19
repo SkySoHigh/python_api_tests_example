@@ -1,5 +1,5 @@
 from api.transport.db import DbTransport
-from api.controllers.db import UserExampleDBController
+from api.controllers.db import ExampleDBController
 
 
 class DBClient:
@@ -11,7 +11,7 @@ class DBClient:
         """
         self.__transport = transport
 
-        self.users = UserExampleDBController(self.__transport)
+        self.example = ExampleDBController(self.__transport)
 
     @property
     def transport(self) -> DbTransport:

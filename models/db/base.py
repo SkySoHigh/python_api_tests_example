@@ -1,5 +1,4 @@
 from sqlalchemy import MetaData
-from sqlalchemy.orm import declarative_base
 
 from .mixins import SerializeMixin
 

@@ -1,2 +1,2 @@
 from .base import BaseDBController
-from .users import UserExampleDBController
+from .example import ExampleDBController
