@@ -1,5 +1,5 @@
 from api.transport.http import HttpTransport
-from api.controllers.http import UserExampleHttpController
+from api.controllers.http import ExampleController
 
 
 class HttpClient:
@@ -11,7 +11,7 @@ class HttpClient:
         """
         self.__transport = transport
 
-        self.users = UserExampleHttpController(self.__transport)
+        self.example = ExampleController(self.__transport, endpoint='/auth/login')
 
     @property
     def transport(self) -> HttpTransport:

@@ -1,2 +1,2 @@
 from .base import BaseHttpController
-from .users import UserExampleHttpController
+from .example import ExampleController
