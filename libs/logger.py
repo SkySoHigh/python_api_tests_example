@@ -26,16 +26,15 @@ def log_func_call(function: C) -> C:
     """
 
     def _log(*args, **kwargs):
-        kwstr = ', '.join('%r: %r' % (k, kwargs[k]) for k in sorted(kwargs))
-        logging.debug(f'Calling {function.__name__} with args: {args} and kwargs: {kwstr}')
+        logging.info(f'func: "{function}", args: "{args}", kwargs: "{kwargs}"')
 
     def decorator(*args, **kwargs):
         if 'allure' in [h.name for h in HANDLERS]:
             with allure.step(f'Called: {function.__name__}'):
-                _log(*args, *kwargs)
+                _log(args, kwargs)
                 return function(*args, **kwargs)
         else:
-            _log(*args, *kwargs)
+            _log(args, kwargs)
             return function(*args, **kwargs)
 
     return decorator
