@@ -8,10 +8,10 @@ from api.transport.db import DbTransport
 from libs.generic_types_helpers import get_generic_type_arg
 from models.db import BaseModel
 
-MODEL_TYPE = TypeVar("MODEL_TYPE", bound=BaseModel)
+DB_MODEL_TYPE = TypeVar("DB_MODEL_TYPE", bound=BaseModel)
 
 
-class BaseDBController(Generic[MODEL_TYPE]):
+class BaseDBController(Generic[DB_MODEL_TYPE]):
     """
     Contains a basic set of private methods for performing operations with database objects.
     """
@@ -21,11 +21,10 @@ class BaseDBController(Generic[MODEL_TYPE]):
         Args:
             transport: SqlAlchemyTransport object for executing commands in the database (transport layer).
         """
-        self.__model = get_generic_type_arg(self)[0]
-        self.__session = transport.session_manager
+        self.model = get_generic_type_arg(self)[0]
+        self.transport = transport.session_manager
 
-
-    def create(self, entity: Type[MODEL_TYPE]) -> NoReturn:
+    def create(self, entity: Type[DB_MODEL_TYPE]) -> NoReturn:
         logging.info('Creaing: ')
         """
         Adds object to the database.
@@ -35,11 +34,11 @@ class BaseDBController(Generic[MODEL_TYPE]):
         Returns: NoReturn
         """
 
-        with self.__session() as session:
+        with self.transport() as session:
             session.add(entity)
             session.commit()
 
-    def read_by(self, *, limit: int = 1000, **filter_kwargs, ) -> List[Tuple[MODEL_TYPE]]:
+    def read_by(self, *, limit: int = 1000, **filter_kwargs, ) -> List[Tuple[DB_MODEL_TYPE]]:
         """
         Reads model based objects from the database with provided filter_kwargs.
 
@@ -51,10 +50,10 @@ class BaseDBController(Generic[MODEL_TYPE]):
         Returns: List with model based database objects
 
         """
-        with self.__session() as session:
-            return session.query(self.__model).filter_by(**filter_kwargs).limit(limit).all()
+        with self.transport() as session:
+            return session.query(self.model).filter_by(**filter_kwargs).limit(limit).all()
 
-    def read_in_batches(self, *, batch_size: int = 100, **filter_kwargs) -> Generator[MODEL_TYPE, None, None]:
+    def read_in_batches(self, *, batch_size: int = 100, **filter_kwargs) -> Generator[DB_MODEL_TYPE, None, None]:
         """
         Reads model based objects from the database as Generator.
 
@@ -65,16 +64,16 @@ class BaseDBController(Generic[MODEL_TYPE]):
 
         Returns: Generator with model based database objects
         """
-        with self.__session() as session:
-            for r in session.query(self.__model).filter_by(**filter_kwargs).yield_per(batch_size):
+        with self.transport() as session:
+            for r in session.query(self.model).filter_by(**filter_kwargs).yield_per(batch_size):
                 yield r
 
     def update_by(self, where: dict, values: dict) -> NoReturn:
-        with self.__session() as session:
-            session.query(self.__model).filter_by(**where).update(values)
+        with self.transport() as session:
+            session.query(self.model).filter_by(**where).update(values)
             session.commit()
 
-    def delete(self, entity: Type[MODEL_TYPE]) -> NoReturn:
+    def delete(self, entity: Type[DB_MODEL_TYPE]) -> NoReturn:
         """
         Deletes object from the database.
 
@@ -83,7 +82,7 @@ class BaseDBController(Generic[MODEL_TYPE]):
 
         Returns: NoReturn
         """
-        with self.__session() as session:
+        with self.transport() as session:
             session.delete(entity)
             session.commit()
 
@@ -96,6 +95,6 @@ class BaseDBController(Generic[MODEL_TYPE]):
 
         Returns: NoReturn
         """
-        with self.__session() as session:
-            session.query(self.__model).filter_by(**filter_kwargs).delete()
+        with self.transport() as session:
+            session.query(self.model).filter_by(**filter_kwargs).delete()
             session.commit()
