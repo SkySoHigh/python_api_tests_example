@@ -37,9 +37,13 @@ class BaseDBController(Generic[DB_MODEL_TYPE]):
         with self.transport() as session:
             session.add(entity)
             session.commit()
+            # Expunge object after it was created
+            # https://docs.sqlalchemy.org/en/14/orm/session_state_management.html#expunging
+            session.refresh(entity)
+            session.expunge(entity)
 
     @log_func_call
-    def read_by(self, *, limit: int = 1000, **filter_kwargs, ) -> List[Tuple[DB_MODEL_TYPE]]:
+    def read_by(self, *, limit: int = 1000, **filter_kwargs, ) -> List[DB_MODEL_TYPE]:
         """
         Reads model based objects from the database with provided filter_kwargs.
 
