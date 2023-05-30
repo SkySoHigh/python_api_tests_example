@@ -3,8 +3,6 @@ import logging.config
 from collections.abc import Callable
 from typing import TypeVar, NoReturn, Any
 
-from configs import CommonConfig
-
 C = TypeVar('C', bound=Callable)
 
 import logging
@@ -125,6 +123,3 @@ class RequestHooks:
         RequestHooks._emmit(title='Response info', log=_log)
 
         return response
-
-
-setup_logging(CommonConfig.LOG_CONFIG)
