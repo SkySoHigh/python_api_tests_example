@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-from typing import List, Type, Generator, TypeVar, Generic, NoReturn, Tuple
-
-import allure
+from typing import List, Type, Generator, TypeVar, Generic, NoReturn
 
 from api.transport.db import DbTransport
 from libs.generic_types_helpers import get_generic_type_arg
-from libs.logger import log_func_call
+from configs.logger import log_func_call
 from models.db import BaseModel
 
 DB_MODEL_TYPE = TypeVar("DB_MODEL_TYPE", bound=BaseModel)

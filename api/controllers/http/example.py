@@ -1,9 +1,6 @@
-import logging
-import logging.handlers
-
 from api.controllers.http import BaseHttpController
 from api.transport.http import HttpResponse
-from libs.logger import log_func_call
+from configs.logger import log_func_call
 from models.http import ExampleModel
 
 
