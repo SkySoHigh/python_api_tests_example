@@ -33,14 +33,6 @@ class DbTransport:
                                       echo_pool=echo_pool)
         self.__session_maker = sessionmaker(self.__engine, autoflush=True, autocommit=False)
 
-    @property
-    def session_maker(self) -> sessionmaker:
-        return self.__session_maker
-
-    @property
-    def engine(self):
-        return self.__engine
-
     @contextmanager
     def session_manager(self) -> ContextManager[Session]:
         """
@@ -52,7 +44,7 @@ class DbTransport:
         Returns:
 
         """
-        with self.session_maker() as _session:
+        with self.__session_maker() as _session:
             try:
                 yield _session
             except exc.SQLAlchemyError as e:

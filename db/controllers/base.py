@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from typing import List, Type, Generator, TypeVar, Generic, NoReturn
 
-from api.transport.db import DbTransport
-from libs.generic_types_helpers import get_generic_type_arg
 from configs.logger import log_func_call
-from models.db import BaseModel
+from db.entities.base import BaseModel
+from db.transport import DbTransport
+from libs.generic_types_helpers import get_generic_type_arg
 
 DB_MODEL_TYPE = TypeVar("DB_MODEL_TYPE", bound=BaseModel)
 
@@ -20,7 +20,7 @@ class BaseDBController(Generic[DB_MODEL_TYPE]):
             transport: SqlAlchemyTransport object for executing commands in the database (transport layer).
         """
         self.model = get_generic_type_arg(self)[0]
-        self.transport = transport.session_manager
+        self.transport = transport
 
     @log_func_call
     def create(self, entity: Type[DB_MODEL_TYPE]) -> NoReturn:
@@ -32,7 +32,7 @@ class BaseDBController(Generic[DB_MODEL_TYPE]):
         Returns: NoReturn
         """
 
-        with self.transport() as session:
+        with self.transport.session_manager() as session:
             session.add(entity)
             session.commit()
             # Expunge object after it was created
@@ -53,7 +53,7 @@ class BaseDBController(Generic[DB_MODEL_TYPE]):
         Returns: List with model based database objects
 
         """
-        with self.transport() as session:
+        with self.transport.session_manager() as session:
             return session.query(self.model).filter_by(**filter_kwargs).limit(limit).all()
 
     @log_func_call
@@ -68,13 +68,13 @@ class BaseDBController(Generic[DB_MODEL_TYPE]):
 
         Returns: Generator with model based database objects
         """
-        with self.transport() as session:
+        with self.transport.session_manager() as session:
             for r in session.query(self.model).filter_by(**filter_kwargs).yield_per(batch_size):
                 yield r
 
     @log_func_call
     def update_by(self, where: dict, values: dict) -> NoReturn:
-        with self.transport() as session:
+        with self.transport.session_manager() as session:
             session.query(self.model).filter_by(**where).update(values)
             session.commit()
 
@@ -88,7 +88,7 @@ class BaseDBController(Generic[DB_MODEL_TYPE]):
 
         Returns: NoReturn
         """
-        with self.transport() as session:
+        with self.transport.session_manager() as session:
             session.delete(entity)
             session.commit()
 
@@ -102,6 +102,6 @@ class BaseDBController(Generic[DB_MODEL_TYPE]):
 
         Returns: NoReturn
         """
-        with self.transport() as session:
+        with self.transport.session_manager() as session:
             session.query(self.model).filter_by(**filter_kwargs).delete()
             session.commit()

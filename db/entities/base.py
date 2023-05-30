@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from sqlalchemy import MetaData
 
 from .mixins import SerializeMixin
@@ -9,3 +10,6 @@ class BaseModel(SerializeMixin):
     """
     __abstract__ = True
     metadata = MetaData()
+
+
+# BaseModel = _BaseModel()
